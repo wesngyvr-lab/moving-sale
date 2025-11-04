@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import Price from "@/components/Price";
@@ -58,6 +59,14 @@ export default async function GaragePage({
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-8 p-8">
+      <Link
+        href="/"
+        className="inline-flex w-fit items-center gap-2 text-sm font-medium text-slate-600 transition hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
+        aria-label="Back to garages"
+      >
+        <span aria-hidden>←</span>
+        Back to garages
+      </Link>
       <header className="space-y-2 text-center">
         <h1 className="text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
           {garage.title}
