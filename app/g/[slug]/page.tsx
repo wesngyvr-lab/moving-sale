@@ -1,7 +1,11 @@
+import Image from "next/image";
 import { notFound } from "next/navigation";
 
 import Price from "@/components/Price";
-import { supabase } from "@/lib/supabaseClient";
+import {
+  supabase,
+  missingSupabaseEnvVars,
+} from "@/lib/supabaseClient";
 
 type Garage = {
   id: string;
@@ -23,6 +27,36 @@ export default async function GaragePage({
 }: {
   params: { slug: string };
 }) {
+  if (!supabase) {
+    return (
+      <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-8 p-8">
+        <header className="space-y-2 text-center">
+          <h1 className="text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
+            Garage unavailable
+          </h1>
+          <p className="text-lg text-slate-600 dark:text-slate-300">
+            Configure Supabase to load garage details.
+          </p>
+        </header>
+
+        <section className="space-y-4 rounded-lg border border-amber-200 bg-amber-50 p-6 text-left dark:border-amber-400/50 dark:bg-amber-950/40">
+          <h2 className="text-2xl font-semibold">Missing environment variables</h2>
+          <ul className="list-disc space-y-1 pl-5 text-sm text-amber-900 dark:text-amber-100">
+            {missingSupabaseEnvVars.map((name) => (
+              <li key={name}>
+                <code>{name}</code>
+              </li>
+            ))}
+          </ul>
+          <p className="text-sm text-amber-900 dark:text-amber-200">
+            Add these variables in Vercel or your local <code>.env.local</code> file,
+            then redeploy to view garage <code>{params.slug}</code>.
+          </p>
+        </section>
+      </main>
+    );
+  }
+
   const { slug } = params;
 
   const { data: garageData, error: garageError } = await supabase
@@ -76,12 +110,15 @@ export default async function GaragePage({
                 className="flex h-full flex-col overflow-hidden rounded-lg border border-slate-200 shadow-sm transition hover:border-slate-400 dark:border-slate-700 dark:hover:border-slate-500"
               >
                 {item.photo_url ? (
-                  <img
-                    src={item.photo_url}
-                    alt={item.title}
-                    className="h-48 w-full object-cover"
-                    loading="lazy"
-                  />
+                  <div className="relative h-48 w-full">
+                    <Image
+                      src={item.photo_url}
+                      alt={item.title}
+                      fill
+                      sizes="(min-width: 1280px) 320px, (min-width: 768px) 50vw, 100vw"
+                      className="object-cover"
+                    />
+                  </div>
                 ) : (
                   <div className="flex h-48 w-full items-center justify-center bg-slate-100 text-sm text-slate-500 dark:bg-slate-800 dark:text-slate-400">
                     No photo available
