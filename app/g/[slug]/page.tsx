@@ -2,10 +2,7 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 
 import Price from "@/components/Price";
-import {
-  supabase,
-  missingSupabaseEnvVars,
-} from "@/lib/supabaseClient";
+import { supabase } from "@/lib/supabaseClient";
 
 type Garage = {
   id: string;
@@ -27,36 +24,6 @@ export default async function GaragePage({
 }: {
   params: { slug: string };
 }) {
-  if (!supabase) {
-    return (
-      <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-8 p-8">
-        <header className="space-y-2 text-center">
-          <h1 className="text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
-            Garage unavailable
-          </h1>
-          <p className="text-lg text-slate-600 dark:text-slate-300">
-            Configure Supabase to load garage details.
-          </p>
-        </header>
-
-        <section className="space-y-4 rounded-lg border border-amber-200 bg-amber-50 p-6 text-left dark:border-amber-400/50 dark:bg-amber-950/40">
-          <h2 className="text-2xl font-semibold">Missing environment variables</h2>
-          <ul className="list-disc space-y-1 pl-5 text-sm text-amber-900 dark:text-amber-100">
-            {missingSupabaseEnvVars.map((name) => (
-              <li key={name}>
-                <code>{name}</code>
-              </li>
-            ))}
-          </ul>
-          <p className="text-sm text-amber-900 dark:text-amber-200">
-            Add these variables in Vercel or your local <code>.env.local</code> file,
-            then redeploy to view garage <code>{params.slug}</code>.
-          </p>
-        </section>
-      </main>
-    );
-  }
-
   const { slug } = params;
 
   const { data: garageData, error: garageError } = await supabase
