@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { notFound } from "next/navigation";
 
 import Price from "@/components/Price";
@@ -76,12 +77,15 @@ export default async function GaragePage({
                 className="flex h-full flex-col overflow-hidden rounded-lg border border-slate-200 shadow-sm transition hover:border-slate-400 dark:border-slate-700 dark:hover:border-slate-500"
               >
                 {item.photo_url ? (
-                  <img
-                    src={item.photo_url}
-                    alt={item.title}
-                    className="h-48 w-full object-cover"
-                    loading="lazy"
-                  />
+                  <div className="relative h-48 w-full">
+                    <Image
+                      src={item.photo_url}
+                      alt={item.title}
+                      fill
+                      sizes="(min-width: 1280px) 320px, (min-width: 768px) 50vw, 100vw"
+                      className="object-cover"
+                    />
+                  </div>
                 ) : (
                   <div className="flex h-48 w-full items-center justify-center bg-slate-100 text-sm text-slate-500 dark:bg-slate-800 dark:text-slate-400">
                     No photo available
