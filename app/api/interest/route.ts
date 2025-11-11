@@ -5,6 +5,7 @@ import { supabaseServer } from "@/lib/supabaseServer";
 type InterestPayload = {
   itemId?: string;
   participantId?: string;
+  participantName?: string | null;
   message?: string | null;
 };
 
@@ -13,6 +14,7 @@ export async function POST(request: Request) {
   const itemId = payload.itemId?.trim();
   const participantId = payload.participantId?.trim();
   const message = payload.message?.trim() || null;
+  const providedName = payload.participantName?.trim();
 
   if (!itemId || !participantId) {
     return NextResponse.json({ error: "itemId and participantId are required." }, { status: 400 });
@@ -36,8 +38,9 @@ export async function POST(request: Request) {
   };
 
   const extendedPayload = { ...basePayload };
-  if (participant.name) {
-    extendedPayload.name = participant.name;
+  const participantName = participant.name || providedName;
+  if (participantName) {
+    extendedPayload.name = participantName;
   }
 
   let { error } = await supabase.from("interests").insert(extendedPayload);

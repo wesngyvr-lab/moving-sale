@@ -87,6 +87,7 @@ export default function InterestDialog({ garageId, itemId, itemTitle }: Props) {
         body: JSON.stringify({
           itemId,
           participantId: participantRecord.id,
+          participantName: participantRecord.name ?? name.trim(),
           message,
         }),
       });
