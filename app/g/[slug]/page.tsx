@@ -4,11 +4,13 @@ import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 
 import CopyGarageLinkButton from "@/components/CopyGarageLinkButton";
+import InterestBadge from "@/components/InterestBadge";
 import ItemOwnerControls from "@/components/ItemOwnerControls";
+import InterestDialog from "@/components/InterestDialog";
 import ListItemForm from "@/components/ListItemForm";
 import OwnerAccessPanel from "@/components/OwnerAccessPanel";
 import Price from "@/components/Price";
-import { supabase } from "@/lib/supabaseClient";
+import { supabaseServer } from "@/lib/supabaseServer";
 
 type Garage = {
   id: string;
@@ -23,6 +25,7 @@ type Item = {
   price_cents: number | null;
   photo_url: string | null;
   status: string;
+  interest_count: number;
 };
 
 export default async function GaragePage({
@@ -31,6 +34,7 @@ export default async function GaragePage({
   params: { slug: string };
 }) {
   const { slug } = params;
+  const supabase = supabaseServer();
 
   const { data: garageData, error: garageError } = await supabase
     .from("garages")
@@ -49,7 +53,7 @@ export default async function GaragePage({
     notFound();
   }
   const cookieStore = cookies();
-  const isAdmin = cookieStore.get("admin")?.value === "1";
+  const isAdmin = cookieStore.get("garage_admin")?.value === garage.id;
 
   const { data: itemsData, error: itemsError } = await supabase
     .from("items")
@@ -62,7 +66,31 @@ export default async function GaragePage({
     throw itemsError;
   }
 
-  const items = (itemsData ?? []) as Item[];
+  const itemsRaw = itemsData ?? [];
+  const itemIds = itemsRaw.map((item) => item.id);
+
+  let interestCounts: Record<string, number> = {};
+  if (itemIds.length > 0) {
+    const { data: interestsData, error: interestError } = await supabase
+      .from("interests")
+      .select("item_id")
+      .in("item_id", itemIds);
+
+    if (interestError) {
+      console.error("Failed to load interest counts", interestError);
+      throw interestError;
+    }
+
+    interestCounts = (interestsData ?? []).reduce<Record<string, number>>((acc, row: { item_id: string }) => {
+      acc[row.item_id] = (acc[row.item_id] ?? 0) + 1;
+      return acc;
+    }, {});
+  }
+
+  const items = itemsRaw.map((item) => ({
+    ...item,
+    interest_count: interestCounts[item.id] ?? 0,
+  })) as Item[];
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-8 p-8">
@@ -92,7 +120,7 @@ export default async function GaragePage({
         )}
       </header>
 
-      <OwnerAccessPanel isAdmin={isAdmin} />
+      <OwnerAccessPanel isAdmin={isAdmin} garageId={garage.id} />
 
       {isAdmin && <ListItemForm garageId={garage.id} />}
 
@@ -129,7 +157,10 @@ export default async function GaragePage({
                       </p>
                     )}
                   </div>
-                  <Price priceCents={item.price_cents} className="text-base font-medium" />
+                  <div className="flex items-center justify-between gap-3">
+                    <Price priceCents={item.price_cents} className="text-base font-medium" />
+                    <InterestBadge itemId={item.id} initialCount={item.interest_count} />
+                  </div>
                   {isAdmin ? (
                     <ItemOwnerControls
                       item={{
@@ -142,9 +173,7 @@ export default async function GaragePage({
                       }}
                     />
                   ) : (
-                    <button className="mt-auto inline-flex items-center justify-center rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200">
-                      I&apos;m interested
-                    </button>
+                    <InterestDialog garageId={garage.id} itemId={item.id} itemTitle={item.title} />
                   )}
                 </div>
               </article>

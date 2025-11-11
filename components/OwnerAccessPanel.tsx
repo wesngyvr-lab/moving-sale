@@ -5,9 +5,10 @@ import { useRouter } from "next/navigation";
 
 type Props = {
   isAdmin: boolean;
+  garageId: string;
 };
 
-export default function OwnerAccessPanel({ isAdmin }: Props) {
+export default function OwnerAccessPanel({ isAdmin, garageId }: Props) {
   const router = useRouter();
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState<string | null>(null);
@@ -18,7 +19,7 @@ export default function OwnerAccessPanel({ isAdmin }: Props) {
     setMessage(null);
 
     if (!password.trim()) {
-      setMessage("Password required.");
+      setMessage("Passcode required.");
       return;
     }
 
@@ -27,7 +28,7 @@ export default function OwnerAccessPanel({ isAdmin }: Props) {
       const response = await fetch("/api/admin/session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({ password, garageId }),
       });
 
       if (!response.ok) {
@@ -77,7 +78,9 @@ export default function OwnerAccessPanel({ isAdmin }: Props) {
       <form className="flex flex-col gap-3 sm:flex-row sm:items-center" onSubmit={handleLogin}>
         <div className="flex-1">
           <p className="font-semibold text-slate-900 dark:text-white">Owner access</p>
-          <p className="text-xs text-slate-600 dark:text-slate-400">Enter the owner passcode to manage this garage.</p>
+          <p className="text-xs text-slate-600 dark:text-slate-400">
+            Enter the owner email (temporary passcode) to manage this garage.
+          </p>
         </div>
         <input
           type="password"
