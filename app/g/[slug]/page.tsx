@@ -2,6 +2,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import CopyGarageLinkButton from "@/components/CopyGarageLinkButton";
+import ListItemForm from "@/components/ListItemForm";
 import Price from "@/components/Price";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -67,14 +69,21 @@ export default async function GaragePage({
         <span aria-hidden>←</span>
         Back to garages
       </Link>
-      <header className="space-y-2 text-center">
-        <h1 className="text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
-          {garage.title}
-        </h1>
-        <p className="text-lg text-slate-600 dark:text-slate-300">
-          Browse the items available in this garage sale.
-        </p>
+      <header className="space-y-4 text-center">
+        <div className="space-y-2">
+          <h1 className="text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
+            {garage.title}
+          </h1>
+          <p className="text-lg text-slate-600 dark:text-slate-300">
+            Browse the items available in this garage sale.
+          </p>
+        </div>
+        <div className="flex justify-center">
+          <CopyGarageLinkButton slug={garage.slug} />
+        </div>
       </header>
+
+      <ListItemForm garageId={garage.id} />
 
       <section className="space-y-6">
         <h2 className="text-2xl font-semibold">Items</h2>
