@@ -1,7 +1,7 @@
-# agent.md — Build Instructions for Codex
+# agent.md - Build Instructions for Codex
 
 ## Goal
-Implement a simple, realtime “garage sale” app:
+Implement a simple, realtime "garage sale" app:
 - Seller creates a **garage**, adds **items**.
 - Friends identify with **name + emoji + email/phone** (no password) and submit **interests** on items.
 - UI updates in realtime (interest counts, status).
@@ -52,15 +52,18 @@ Implement a simple, realtime “garage sale” app:
 
 ## Data Model (must match Supabase)
 - `garages(id, slug unique, title, owner_email, created_at)`
-- `items(id, garage_id→garages.id, title, price_cents null, photo_url, description, status default 'available', created_at)`
-- `participants(id, garage_id→garages.id, name, emoji, email null, phone null, created_at)`
-- `interests(id, item_id→items.id, participant_id→participants.id, message null, created_at)`
-- Indexes: `idx_items_garage`, `idx_interests_item`, `idx_participants_garage`
+- `items(id, garage_id -> garages.id, title, price_cents null, photo_url, description, status default 'available', created_at)`
+- `participants(id, garage_id -> garages.id, name, emoji default 'dYT,', email null, phone null, created_at)`
+- `interests(id, item_id -> items.id, participant_id -> participants.id, message null, created_at)`
+- Indexes: `idx_items_garage`, `idx_participants_garage`, `idx_interests_item`, `idx_interests_participant`
+- Constraints:
+  - Unique interest per `(item_id, participant_id)` (`ux_interests_item_participant`).
+  - Trigger/function (`ensure_interest_same_garage` + `trg_interests_same_garage`) enforces participant/item garage match.
 - RLS:
   - `garages`: `select using (true)`
   - `items`: `select using (true)`
-  - `participants`: `insert with check (true)`; optional `select:false`
-  - `interests`: `insert with check (true)`; optional `select:false`
+  - `participants`: `insert with check (true)`; `select using (false)`
+  - `interests`: `insert with check (true)`; `select using (false)`
 
 ## Tasks (ordered)
 
@@ -82,7 +85,7 @@ Implement a simple, realtime “garage sale” app:
 
 ### 2) Home `/`
 - Server component. Fetch `garages(slug,title)` and render list linking to `/g/[slug]`.
-- Add header button “Create Garage” → `/new`.
+- Add header button "Create Garage" linking to `/new`.
 
 ### 3) Create Garage `/new`
 - Render `<GarageCreator />`: fields `title`, auto-slug, `owner_email`.
@@ -95,13 +98,13 @@ Implement a simple, realtime “garage sale” app:
   - Fetch garage by slug.
   - Fetch items for garage ordered by `created_at desc`.
 - Render a responsive grid of `<ItemCard />`:
-  - show image, title, description, `FREE` if `price_cents is null` else `$`.
+  - show image, title, description, `FREE` if `price_cents is null` else format dollar price.
   - include `<InterestDialog itemId={...} />`.
-  - show a **live** badge “X interested” (subscribe to Realtime on `interests` for that garage and aggregate counts client-side).
-- Include `<AdminBar>` if admin cookie present: “Add item”, “Mark reserved/sold”, “Close garage”, “Delete garage”.
+  - show a **live** badge "X interested" (subscribe to Realtime on `interests` for that garage and aggregate counts client-side).
+- Include `<AdminBar>` if admin cookie present: "Add item", "Mark reserved/sold", "Close garage", "Delete garage".
 
 ### 5) Add Item (admin)
-- `<AdminBar>` “Add item” opens modal to POST to `/api/items`:
+- `<AdminBar>` "Add item" opens modal to POST to `/api/items`:
   - insert: `(garage_id, title, price_cents|null, photo_url, description)`.
   - on success: item appears via realtime (or manual re-fetch).
 
@@ -109,11 +112,11 @@ Implement a simple, realtime “garage sale” app:
 - First action in `<InterestDialog>`:
   - If no `participant_id` in `localStorage` for this `garage_id`, POST to `/api/participants` with `{garage_id, name, emoji, email/phone}` and store returned `participant_id` in localStorage (key: `p:${garage_id}`).
 - Then POST to `/api/interest` with `{ item_id, participant_id, message? }`.
-- On success, close modal and toast “Thanks! We’ll let the seller know.”  
+- On success, close modal and toast "Thanks! We'll let the seller know."
 - **Realtime:** subscribe to interests on this garage to update item badges.
 
 ### 7) Admin Dashboard `/admin`
-- If no `admin=1` cookie: render password form → compare to `ADMIN_PASS` (server action). On success, set HttpOnly cookie and redirect.
+- If no `admin=1` cookie: render password form + compare to `ADMIN_PASS` (server action). On success, set HttpOnly cookie and redirect.
 - With admin cookie:
   - Show KPIs:
     - total items in selected garage
@@ -127,7 +130,7 @@ Implement a simple, realtime “garage sale” app:
   - subscribe to `interests` filtered by items in this garage; recompute counters in state.
 
 ### 9) Styling Rules
-- Tailwind utilities. Rounded-2xl, 12–16px paddings, subtle shadow.
+- Tailwind utilities. Rounded-2xl, 12-16px paddings, subtle shadow.
 - Use system font; base 18px; headings semi-bold.
 - Palette: bg `#0B0E14` (dark) or `#111827`; accents `#7C3AED`, `#06B6D4`, success `#10B981`.
 - Encourage emoji in UI (`emoji` field on participant, badges in cards).
@@ -146,3 +149,8 @@ Implement a simple, realtime “garage sale” app:
 - `/admin` gated by password; KPIs compute correctly.
 - All pages render with no blocking TypeScript or build errors.
 
+## Key Behaviors
+- Visitors can view all items in a garage without logging in.
+- Participants identify once per garage and we persist their emoji + contact data.
+- Interests are unique per participant-item pair and validated so participant + item share the same garage.
+- Only the seller (admin dashboard) can view participants or interests; public reads are limited to garages/items.
