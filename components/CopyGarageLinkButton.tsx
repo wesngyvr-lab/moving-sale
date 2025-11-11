@@ -4,9 +4,10 @@ import { useCallback, useState } from "react";
 
 type Props = {
   slug: string;
+  mode?: "share" | "default";
 };
 
-export default function CopyGarageLinkButton({ slug }: Props) {
+export default function CopyGarageLinkButton({ slug, mode = "default" }: Props) {
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -31,7 +32,11 @@ export default function CopyGarageLinkButton({ slug }: Props) {
         onClick={handleCopy}
         className="inline-flex items-center rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-violet-400 hover:text-violet-600 dark:border-slate-700 dark:text-slate-200 dark:hover:border-violet-400"
       >
-        {copied ? "Link copied!" : "Copy garage URL"}
+        {copied
+          ? "Link copied!"
+          : mode === "share"
+            ? "Copy share link"
+            : "Copy garage URL"}
       </button>
       {error && <span className="text-xs text-red-400">{error}</span>}
     </div>

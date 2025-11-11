@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { priceInputToCents } from "@/lib/price";
 import { supabaseServer } from "@/lib/supabaseServer";
 
 type ItemPayload = {
@@ -8,20 +9,6 @@ type ItemPayload = {
   price?: string | number | null;
   description?: string | null;
   photoUrl?: string | null;
-};
-
-const sanitizePrice = (value?: string | number | null) => {
-  if (value === null || value === undefined || value === "") {
-    return null;
-  }
-
-  const numeric = typeof value === "string" ? Number(value) : value;
-  if (Number.isNaN(numeric)) {
-    return Number.NaN;
-  }
-
-  const cents = Math.round(numeric * 100);
-  return cents < 0 ? 0 : cents;
 };
 
 export async function POST(request: Request) {
@@ -39,7 +26,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Title is required." }, { status: 400 });
   }
 
-  const priceCents = sanitizePrice(payload.price);
+  const priceCents = priceInputToCents(payload.price);
   if (Number.isNaN(priceCents)) {
     return NextResponse.json({ error: "Price must be a number." }, { status: 400 });
   }

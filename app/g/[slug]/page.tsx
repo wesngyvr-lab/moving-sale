@@ -1,9 +1,12 @@
 import Image from "next/image";
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 
 import CopyGarageLinkButton from "@/components/CopyGarageLinkButton";
+import ItemOwnerControls from "@/components/ItemOwnerControls";
 import ListItemForm from "@/components/ListItemForm";
+import OwnerAccessPanel from "@/components/OwnerAccessPanel";
 import Price from "@/components/Price";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -45,6 +48,8 @@ export default async function GaragePage({
   if (!garage) {
     notFound();
   }
+  const cookieStore = cookies();
+  const isAdmin = cookieStore.get("admin")?.value === "1";
 
   const { data: itemsData, error: itemsError } = await supabase
     .from("items")
@@ -75,15 +80,21 @@ export default async function GaragePage({
             {garage.title}
           </h1>
           <p className="text-lg text-slate-600 dark:text-slate-300">
-            Browse the items available in this garage sale.
+            {isAdmin
+              ? "Manage your listings and keep friends updated."
+              : "Browse the items available in this garage sale."}
           </p>
         </div>
-        <div className="flex justify-center">
-          <CopyGarageLinkButton slug={garage.slug} />
-        </div>
+        {isAdmin && (
+          <div className="flex justify-center">
+            <CopyGarageLinkButton slug={garage.slug} mode="share" />
+          </div>
+        )}
       </header>
 
-      <ListItemForm garageId={garage.id} />
+      <OwnerAccessPanel isAdmin={isAdmin} />
+
+      {isAdmin && <ListItemForm garageId={garage.id} />}
 
       <section className="space-y-6">
         <h2 className="text-2xl font-semibold">Items</h2>
@@ -119,9 +130,22 @@ export default async function GaragePage({
                     )}
                   </div>
                   <Price priceCents={item.price_cents} className="text-base font-medium" />
-                  <button className="mt-auto inline-flex items-center justify-center rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200">
-                    I&apos;m interested
-                  </button>
+                  {isAdmin ? (
+                    <ItemOwnerControls
+                      item={{
+                        id: item.id,
+                        title: item.title,
+                        description: item.description,
+                        price_cents: item.price_cents,
+                        photo_url: item.photo_url,
+                        status: item.status,
+                      }}
+                    />
+                  ) : (
+                    <button className="mt-auto inline-flex items-center justify-center rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200">
+                      I&apos;m interested
+                    </button>
+                  )}
                 </div>
               </article>
             ))}
