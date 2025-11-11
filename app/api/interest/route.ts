@@ -38,10 +38,8 @@ export async function POST(request: Request) {
   };
 
   const extendedPayload = { ...basePayload };
-  const participantName = participant.name || providedName;
-  if (participantName) {
-    extendedPayload.name = participantName;
-  }
+  const participantName = participant.name || providedName || "Friend";
+  extendedPayload.name = participantName;
 
   let { error } = await supabase.from("interests").insert(extendedPayload);
 
