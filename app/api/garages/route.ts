@@ -48,7 +48,7 @@ export async function POST(request: Request) {
       .eq("slug", uniqueSlug)
       .maybeSingle();
 
-    if (lookupError) {
+    if (lookupError && lookupError.code !== "PGRST116") {
       console.error("Slug check failed", lookupError);
       return NextResponse.json({ error: "Failed checking slug availability." }, { status: 500 });
     }
