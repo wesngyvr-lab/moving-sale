@@ -49,6 +49,7 @@ export async function POST(request: Request) {
       .maybeSingle();
 
     if (lookupError) {
+      console.error("Slug check failed", lookupError);
       return NextResponse.json({ error: "Failed checking slug availability." }, { status: 500 });
     }
 
@@ -71,7 +72,8 @@ export async function POST(request: Request) {
     .single();
 
   if (error) {
-    return NextResponse.json({ error: "Failed to create garage." }, { status: 500 });
+    console.error("Supabase insert error", error);
+    return NextResponse.json({ error: error.message ?? "Failed to create garage." }, { status: 500 });
   }
 
   return NextResponse.json({ slug: data.slug }, { status: 201 });
