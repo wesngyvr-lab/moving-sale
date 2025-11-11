@@ -1,6 +1,6 @@
 # agent.md - Build Instructions for Codex
 
-## Goal
+## Goals
 Implement a simple, realtime "garage sale" app:
 - Seller creates a **garage**, adds **items**.
 - Friends identify with **name + emoji + email/phone** (no password) and submit **interests** on items.
@@ -9,7 +9,7 @@ Implement a simple, realtime "garage sale" app:
 
 ## Non-Goals (for V1)
 - No global auth system.
-- No payments yet.
+- No payments yet but to be added in future.
 - No email sending yet (leave TODO with function boundaries).
 - No file uploads yet (use `photo_url` string; TODO: Supabase Storage).
 
