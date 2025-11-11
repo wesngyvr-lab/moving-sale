@@ -48,109 +48,248 @@ A lightweight, friend-first “garage sale” web app. You (the seller) create a
 
 ---
 
-## Data Model
+## 📦 Data Model
 
-**garages**
-- `id` (uuid, pk)
-- `slug` (text, unique)
-- `title` (text)
-- `owner_email` (text)
-- `created_at` (timestamptz)
+### 1. `garages`
+Each garage = one sale, owned by a host (e.g. “Wes’s Moving Sale”).
 
-**items**
-- `id` (uuid, pk)
-- `garage_id` (uuid → garages.id, cascade delete)
-- `title` (text)
-- `price_cents` (int, nullable ⇒ FREE when null)
-- `photo_url` (text)
-- `description` (text)
-- `status` (text, default `available`) — `available | reserved | sold`
-- `created_at` (timestamptz)
-
-**participants**  ← friend identity local to a garage
-- `id` (uuid, pk)
-- `garage_id` (uuid → garages.id)
-- `name` (text)
-- `emoji` (text, e.g., "🧋")
-- `email` (text, nullable)
-- `phone` (text, nullable)
-- `created_at` (timestamptz)
-
-**interests**
-- `id` (uuid, pk)
-- `item_id` (uuid → items.id)
-- `participant_id` (uuid → participants.id)
-- `message` (text, nullable)
-- `created_at` (timestamptz)
-
-**Indexes**
-- `idx_items_garage (items.garage_id)`
-- `idx_interests_item (interests.item_id)`
-- `idx_participants_garage (participants.garage_id)`
-
-**RLS (summary)**
-- `garages`: `select: true` (public read)
-- `items`: `select: true` (public read)
-- `participants`: `insert: true`; no public select (privacy)
-- `interests`: `insert: true`; no public select (privacy)
-> Admin view fetches interests/participants server-side, gated by cookie check.
+| Column | Type | Description |
+|--------|------|--------------|
+| `id` | `uuid` (PK) | Unique ID |
+| `slug` | `text` | Unique short name (e.g. `wes-moving-sale`) |
+| `title` | `text` | Human title |
+| `owner_email` | `text` | Admin contact |
+| `created_at` | `timestamptz` | Auto timestamp |
 
 ---
 
-## Environment
+### 2. `items`
+Each listing belongs to one garage.
 
-Create `.env.local` (do not commit):
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | `uuid` (PK) | Unique item ID |
+| `garage_id` | `uuid` (FK → garages.id)` | Parent garage |
+| `title` | `text` | Item name |
+| `price_cents` | `int` | `NULL` = free |
+| `photo_url` | `text` | Image |
+| `description` | `text` | Optional |
+| `status` | `text` | `available`, `reserved`, `sold` |
+| `created_at` | `timestamptz` | Auto timestamp |
+
+---
+
+### 3. `participants`
+Friends who identify themselves for a given garage.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | `uuid` (PK) | Unique ID |
+| `garage_id` | `uuid` (FK → garages.id)` | Which sale this friend belongs to |
+| `name` | `text` | Display name |
+| `emoji` | `text` | Fun avatar (default 🙂) |
+| `email` | `text` | Optional contact |
+| `phone` | `text` | Optional contact |
+| `created_at` | `timestamptz` | Auto timestamp |
+
+---
+
+### 4. `interests`
+Tracks which participants are interested in which items.  
+(Each participant–item pair is unique.)
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | `uuid` (PK) | Unique interest record |
+| `item_id` | `uuid` (FK → items.id)` | The item of interest |
+| `participant_id` | `uuid` (FK → participants.id)` | The interested person |
+| `message` | `text` | Optional note (e.g. “Can I pick up on Saturday?”) |
+| `created_at` | `timestamptz` | Auto timestamp |
+
+**Constraints**
+- ✅ Unique on (`item_id`, `participant_id`) — one interest per person per item  
+- ✅ Trigger-enforced rule: participant’s `garage_id` must match item’s `garage_id`
+
+---
+
+## ⚙️ Indexes
+
+```sql
+create index if not exists idx_items_garage          on public.items(garage_id);
+create index if not exists idx_participants_garage   on public.participants(garage_id);
+create index if not exists idx_interests_item        on public.interests(item_id);
+create index if not exists idx_interests_participant on public.interests(participant_id);
 ```
-NEXT_PUBLIC_SUPABASE_URL=...
-NEXT_PUBLIC_SUPABASE_ANON_KEY=...
-ADMIN_PASS=choose-a-strong-password
+
+---
+
+## 🔒 Row-Level Security (RLS)
+
+| Table | Policy | Description |
+|-------|---------|-------------|
+| `garages` | `read garages` | Public can read |
+| `items` | `read items` | Public can read |
+| `participants` | `insert participants` | Public can insert to identify themselves |
+| `participants` | `read participants` | Public **cannot** read (privacy) |
+| `interests` | `insert interests` | Public can express interest |
+| `interests` | `read interests` | Public **cannot** read (privacy) |
+
+---
+
+## 🧪 SQL Initial Data Seed
+
+```sql
+-- =========================================================
+-- Garage Sale schema (idempotent fix for participant_id)
+-- =========================================================
+
+-- Ensure UUID helper is available (Supabase usually has this)
+create extension if not exists "pgcrypto";
+
+-- === TABLES ================================================================
+
+-- 1) GARAGES
+create table if not exists public.garages (
+  id uuid primary key default gen_random_uuid(),
+  slug text unique not null,
+  title text not null,
+  owner_email text not null,
+  created_at timestamptz not null default now()
+);
+
+-- 2) ITEMS
+create table if not exists public.items (
+  id uuid primary key default gen_random_uuid(),
+  garage_id uuid not null references public.garages(id) on delete cascade,
+  title text not null,
+  price_cents int,                -- NULL => FREE
+  photo_url text,
+  description text,
+  status text not null default 'available', -- available | reserved | sold
+  created_at timestamptz not null default now()
+);
+
+-- 3) PARTICIPANTS
+create table if not exists public.participants (
+  id uuid primary key default gen_random_uuid(),
+  garage_id uuid not null references public.garages(id) on delete cascade,
+  name text not null,
+  emoji text not null default '🙂',
+  email text,
+  phone text,
+  created_at timestamptz not null default now()
+);
+
+-- 4) INTERESTS (may already exist without participant_id on older runs)
+create table if not exists public.interests (
+  id uuid primary key default gen_random_uuid(),
+  item_id uuid not null references public.items(id) on delete cascade,
+  -- participant_id will be (re)added below if missing
+  message text,
+  created_at timestamptz not null default now()
+);
+
+-- Ensure interests.participant_id column exists
+alter table public.interests
+  add column if not exists participant_id uuid;
+
+-- Ensure FK interests.participant_id -> participants.id exists
+do $$
+begin
+  if not exists (
+    select 1
+    from information_schema.table_constraints tc
+    join information_schema.key_column_usage kcu
+      on kcu.constraint_name = tc.constraint_name
+     and kcu.table_schema   = tc.table_schema
+    where tc.table_schema = 'public'
+      and tc.table_name   = 'interests'
+      and tc.constraint_type = 'FOREIGN KEY'
+      and kcu.column_name = 'participant_id'
+  ) then
+    alter table public.interests
+      add constraint interests_participant_fk
+      foreign key (participant_id)
+      references public.participants(id)
+      on delete cascade;
+  end if;
+end$$;
+
+-- === UNIQUENESS (use index so it's IF NOT EXISTS friendly) =================
+-- One interest per participant per item
+create unique index if not exists ux_interests_item_participant
+  on public.interests(item_id, participant_id);
+
+-- === CROSS-GARAGE GUARD ====================================================
+-- Participant’s garage must equal item’s garage
+create or replace function public.ensure_interest_same_garage()
+returns trigger language plpgsql as $$
+declare
+  item_g uuid;
+  part_g uuid;
+begin
+  select garage_id into item_g from public.items where id = NEW.item_id;
+  select garage_id into part_g from public.participants where id = NEW.participant_id;
+
+  if item_g is null or part_g is null or item_g <> part_g then
+    raise exception 'Participant and Item must belong to the same garage';
+  end if;
+
+  return NEW;
+end;
+$$;
+
+drop trigger if exists trg_interests_same_garage on public.interests;
+create trigger trg_interests_same_garage
+before insert or update on public.interests
+for each row execute function public.ensure_interest_same_garage();
+
+-- === INDEXES ===============================================================
+create index if not exists idx_items_garage            on public.items(garage_id);
+create index if not exists idx_participants_garage     on public.participants(garage_id);
+create index if not exists idx_interests_item          on public.interests(item_id);
+create index if not exists idx_interests_participant   on public.interests(participant_id);
+
+-- === RLS ===================================================================
+alter table public.garages      enable row level security;
+alter table public.items        enable row level security;
+alter table public.participants enable row level security;
+alter table public.interests    enable row level security;
+
+-- public can read garages and items
+drop policy if exists "read garages" on public.garages;
+create policy "read garages" on public.garages for select using (true);
+
+drop policy if exists "read items" on public.items;
+create policy "read items" on public.items for select using (true);
+
+-- public can insert participants (so friends can identify themselves)
+drop policy if exists "insert participants" on public.participants;
+create policy "insert participants" on public.participants
+for insert with check (true);
+
+-- public cannot read participants (privacy)
+drop policy if exists "read participants" on public.participants;
+create policy "read participants" on public.participants
+for select using (false);
+
+-- public can insert interests (clicking "I'm interested")
+drop policy if exists "insert interests" on public.interests;
+create policy "insert interests" on public.interests
+for insert with check (true);
+
+-- public cannot read interests (privacy)
+drop policy if exists "read interests" on public.interests;
+create policy "read interests" on public.interests
+for select using (false);
+
 ```
 
-Add the same keys in **Vercel → Settings → Environment Variables** (Preview + Production).
-
 ---
 
-## Local Dev
-
-```bash
-npm install
-npm run dev
-# open http://localhost:3000  (or 3001 if 3000 is in use)
-```
-
----
-
-## How to Use (V1)
-
-1. **Create a garage** at `/new`  
-   - Enter `title`, slug auto-suggested from title (editable), `owner_email`.
-2. You land on `/g/[slug]` with an **empty item list**.
-3. Click **Add item** (in admin bar) → fill title, price, description, photo URL.
-4. Share link `/g/[slug]` with friends.
-5. Friends pick **name + emoji + email/phone** (first time per garage), then click **I’m interested** on items.  
-6. You watch **live interest counts** and can **mark status** to `reserved/sold`.
-7. Admin dashboard at `/admin` (enter `ADMIN_PASS`) to see KPIs and manage status.
-
----
-
-## Visual Style (for contributors)
-- **Vibe:** light, friendly, emoji-forward; minimal components; large tap targets.
-- **Typography:** system font stack; headings semi-bold; 18px base.
-- **Palette:**
-  - BG: `#0B0E14` (near-black) or `#111827` (gray-900)
-  - Cards: `#111827`/white in light theme
-  - Accent: `#7C3AED` (purple), `#06B6D4` (teal)
-  - Success: `#10B981`, Warning: `#F59E0B`
-- **Components:** soft corners (rounded-2xl), subtle shadows, 12–16px padding.
-- **Emoji:** encourage for participant identity and item fun (🥳🩋📚).
-
----
-
-## Roadmap
-- [ ] Email notifications to owner on new interest
-- [ ] Password-lock garages for friends
-- [ ] Supabase Storage upload from phone (camera)
-- [ ] CSV export (items + interest list)
-- [ ] Soft-delete items; archive garage
-- [ ] Optional payments (Venmo link “Settle”)
-
+## 💡 Key Behaviors
+- Visitors can view all items in a garage.
+- Visitors identify themselves once per garage (`participants`).
+- They can mark items they’re interested in (`interests`).
+- Interests are **unique per participant–item** and **validated** to ensure they’re from the same garage.
+- Privacy: only the host can view participants/interests in the admin dashboard.
