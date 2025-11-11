@@ -19,11 +19,30 @@ export async function POST(request: Request) {
   }
 
   const supabase = supabaseServer();
-  const { error } = await supabase.from("interests").insert({
+  const { data: participant, error: participantError } = await supabase
+    .from("participants")
+    .select("name,emoji")
+    .eq("id", participantId)
+    .single();
+
+  if (participantError || !participant) {
+    return NextResponse.json({ error: "Participant not found." }, { status: 404 });
+  }
+
+  const insertPayload: Record<string, unknown> = {
     item_id: itemId,
     participant_id: participantId,
     message,
-  });
+  };
+
+  if (participant.name) {
+    insertPayload.name = participant.name;
+  }
+  if (participant.emoji) {
+    insertPayload.emoji = participant.emoji;
+  }
+
+  const { error } = await supabase.from("interests").insert(insertPayload);
 
   if (error) {
     console.error("Failed to create interest", error);
