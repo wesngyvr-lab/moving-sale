@@ -12,10 +12,7 @@ type Props = {
 type Participant = {
   id: string;
   name: string;
-  emoji: string;
 };
-
-const EMOJIS = ["😀", "😎", "🥳", "🤩", "🤠", "😺", "🦄", "🐼", "🐸", "🐝", "🍕", "🌈", "✨", "🔥", "💎"];
 
 export default function InterestDialog({ garageId, itemId, itemTitle }: Props) {
   const router = useRouter();
@@ -24,7 +21,6 @@ export default function InterestDialog({ garageId, itemId, itemTitle }: Props) {
   const [participant, setParticipant] = useState<Participant | null>(null);
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
-  const [emoji, setEmoji] = useState(EMOJIS[0]);
   const [contact, setContact] = useState("");
   const [message, setMessage] = useState("");
   const [feedback, setFeedback] = useState<string | null>(null);
@@ -39,7 +35,6 @@ export default function InterestDialog({ garageId, itemId, itemTitle }: Props) {
         if (parsed?.id) {
           setParticipant(parsed);
           setName(parsed.name);
-          setEmoji(parsed.emoji);
         }
       } catch {
         // ignore
@@ -56,7 +51,6 @@ export default function InterestDialog({ garageId, itemId, itemTitle }: Props) {
       body: JSON.stringify({
         garageId,
         name,
-        emoji,
         email: contact.includes("@") ? contact : undefined,
         phone: contact.includes("@") ? undefined : contact,
       }),
@@ -146,21 +140,6 @@ export default function InterestDialog({ garageId, itemId, itemTitle }: Props) {
                 onChange={(event) => setName(event.target.value)}
                 required
               />
-            </label>
-
-            <label className="mt-3 block text-sm font-medium text-slate-900 dark:text-slate-100">
-              Emoji avatar
-              <select
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                value={emoji}
-                onChange={(event) => setEmoji(event.target.value)}
-              >
-                {EMOJIS.map((symbol) => (
-                  <option key={symbol} value={symbol}>
-                    {symbol}
-                  </option>
-                ))}
-              </select>
             </label>
 
             <label className="mt-3 block text-sm font-medium text-slate-900 dark:text-slate-100">

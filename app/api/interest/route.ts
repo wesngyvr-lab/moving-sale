@@ -21,7 +21,7 @@ export async function POST(request: Request) {
   const supabase = supabaseServer();
   const { data: participant, error: participantError } = await supabase
     .from("participants")
-    .select("name,emoji")
+    .select("name")
     .eq("id", participantId)
     .single();
 
@@ -29,20 +29,24 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Participant not found." }, { status: 404 });
   }
 
-  const insertPayload: Record<string, unknown> = {
+  const basePayload: Record<string, unknown> = {
     item_id: itemId,
     participant_id: participantId,
     message,
   };
 
+  const extendedPayload = { ...basePayload };
   if (participant.name) {
-    insertPayload.name = participant.name;
-  }
-  if (participant.emoji) {
-    insertPayload.emoji = participant.emoji;
+    extendedPayload.name = participant.name;
   }
 
-  const { error } = await supabase.from("interests").insert(insertPayload);
+  let { error } = await supabase.from("interests").insert(extendedPayload);
+
+  if (error && error.message?.includes("column")) {
+    // Fallback for schemas without denormalized columns
+    const result = await supabase.from("interests").insert(basePayload);
+    error = result.error;
+  }
 
   if (error) {
     console.error("Failed to create interest", error);

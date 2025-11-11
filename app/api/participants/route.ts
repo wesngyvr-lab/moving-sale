@@ -5,7 +5,6 @@ import { supabaseServer } from "@/lib/supabaseServer";
 type ParticipantPayload = {
   garageId?: string;
   name?: string;
-  emoji?: string;
   email?: string | null;
   phone?: string | null;
 };
@@ -14,7 +13,6 @@ export async function POST(request: Request) {
   const payload = (await request.json()) as ParticipantPayload;
   const garageId = payload.garageId?.trim();
   const name = payload.name?.trim();
-  const emoji = (payload.emoji ?? "🙂").trim() || "🙂";
   const email = payload.email?.trim() || null;
   const phone = payload.phone?.trim() || null;
 
@@ -32,11 +30,10 @@ export async function POST(request: Request) {
     .insert({
       garage_id: garageId,
       name,
-      emoji,
       email,
       phone,
     })
-    .select("id,name,emoji")
+    .select("id,name")
     .single();
 
   if (error) {
@@ -44,5 +41,5 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message ?? "Failed to create participant." }, { status: 500 });
   }
 
-  return NextResponse.json({ id: data.id, name: data.name, emoji: data.emoji }, { status: 201 });
+  return NextResponse.json({ id: data.id, name: data.name }, { status: 201 });
 }

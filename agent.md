@@ -3,7 +3,7 @@
 ## Goals
 Implement a simple, realtime "garage sale" app:
 - Seller creates a **garage**, adds **items**.
-- Friends identify with **name + emoji + email/phone** (no password) and submit **interests** on items.
+- Friends identify with **name + email/phone** (no password) and submit **interests** on items.
 - UI updates in realtime (interest counts, status).
 - Admin area for seller with basic KPIs + item status controls.
 
@@ -39,7 +39,6 @@ Implement a simple, realtime "garage sale" app:
 /components
   /ItemCard.tsx
   /InterestDialog.tsx
-  /EmojiPicker.tsx
   /ParticipantBadge.tsx
   /GarageCreator.tsx       # small form for /new
   /AdminBar.tsx
@@ -53,7 +52,7 @@ Implement a simple, realtime "garage sale" app:
 ## Data Model (must match Supabase)
 - `garages(id, slug unique, title, owner_email, created_at)`
 - `items(id, garage_id -> garages.id, title, price_cents null, photo_url, description, status default 'available', created_at)`
-- `participants(id, garage_id -> garages.id, name, emoji default 'dYT,', email null, phone null, created_at)`
+- `participants(id, garage_id -> garages.id, name, email null, phone null, created_at)`
 - `interests(id, item_id -> items.id, participant_id -> participants.id, message null, created_at)`
 - Indexes: `idx_items_garage`, `idx_participants_garage`, `idx_interests_item`, `idx_interests_participant`
 - Constraints:
@@ -110,7 +109,7 @@ Implement a simple, realtime "garage sale" app:
 
 ### 6) Participants & Interest (friend flow)
 - First action in `<InterestDialog>`:
-  - If no `participant_id` in `localStorage` for this `garage_id`, POST to `/api/participants` with `{garage_id, name, emoji, email/phone}` and store returned `participant_id` in localStorage (key: `p:${garage_id}`).
+  - If no `participant_id` in `localStorage` for this `garage_id`, POST to `/api/participants` with `{garage_id, name, email/phone}` and store returned `participant_id` in localStorage (key: `p:${garage_id}`).
 - Then POST to `/api/interest` with `{ item_id, participant_id, message? }`.
 - On success, close modal and toast "Thanks! We'll let the seller know."
 - **Realtime:** subscribe to interests on this garage to update item badges.
@@ -133,7 +132,6 @@ Implement a simple, realtime "garage sale" app:
 - Tailwind utilities. Rounded-2xl, 12-16px paddings, subtle shadow.
 - Use system font; base 18px; headings semi-bold.
 - Palette: bg `#0B0E14` (dark) or `#111827`; accents `#7C3AED`, `#06B6D4`, success `#10B981`.
-- Encourage emoji in UI (`emoji` field on participant, badges in cards).
 
 ### 10) TODO hooks (leave as comments)
 - Email notification on new interest:
@@ -151,6 +149,6 @@ Implement a simple, realtime "garage sale" app:
 
 ## Key Behaviors
 - Visitors can view all items in a garage without logging in.
-- Participants identify once per garage and we persist their emoji + contact data.
+- Participants identify once per garage and we persist their contact data.
 - Interests are unique per participant-item pair and validated so participant + item share the same garage.
 - Only the seller (admin dashboard) can view participants or interests; public reads are limited to garages/items.

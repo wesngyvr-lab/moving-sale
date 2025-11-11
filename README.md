@@ -1,11 +1,11 @@
 # 🧰 Furniture / Garage Sale — Moving Sale
 
-A lightweight, friend-first “garage sale” web app. You (the seller) create a **garage**, add items with pics, and share a link. Friends visit, pick a **name + emoji**, tap **I’m interested**, and you see interest in realtime.
+A lightweight, friend-first “garage sale” web app. You (the seller) create a **garage**, add items with pics, and share a link. Friends visit, enter a **name + contact**, tap **I’m interested**, and you see interest in realtime.
 
 ## TL;DR
 - Seller creates a **garage** from the web app (no complex auth).
 - Items: title, price (nullable for FREE), photo, description, status.
-- Friends: enter **name + emoji + email/phone**, then mark **Interest**.
+- Friends: enter **name + email/phone**, then mark **Interest**.
 - **Multiple** friends can be interested in the same item; we show who & counts.
 - Realtime UI updates (interest counts, status changes).
 - Admin (seller) can: add items, copy share link, close/delete garage, mark items reserved/sold.  
@@ -26,7 +26,7 @@ A lightweight, friend-first “garage sale” web app. You (the seller) create a
 
 ### Friend (Buyer)
 - Open `/g/[slug]`.
-- Enter **name + emoji + email/phone** (no password).
+- Enter **name + email/phone** (no password).
 - Tap **I’m interested** on any item; optionally leave a short message.
 - See others who are interested and the order (first interest is visible).
 
@@ -42,7 +42,7 @@ A lightweight, friend-first “garage sale” web app. You (the seller) create a
 ## Tech Stack
 - **Next.js 14 (App Router) + TypeScript**
 - **Supabase** (Postgres, Realtime, Row Level Security)
-- Tailwind (light touch, Gen-Z emoji vibe)
+- Tailwind (light touch, friendly vibe)
 - (TODO) Email notifications (Resend / SendGrid)
 - (TODO) Supabase Storage for photo uploads
 
@@ -87,7 +87,6 @@ Friends who identify themselves for a given garage.
 | `id` | `uuid` (PK) | Unique ID |
 | `garage_id` | `uuid` (FK → garages.id)` | Which sale this friend belongs to |
 | `name` | `text` | Display name |
-| `emoji` | `text` | Fun avatar (default 🙂) |
 | `email` | `text` | Optional contact |
 | `phone` | `text` | Optional contact |
 | `created_at` | `timestamptz` | Auto timestamp |
@@ -174,7 +173,6 @@ create table if not exists public.participants (
   id uuid primary key default gen_random_uuid(),
   garage_id uuid not null references public.garages(id) on delete cascade,
   name text not null,
-  emoji text not null default '🙂',
   email text,
   phone text,
   created_at timestamptz not null default now()
